@@ -137,8 +137,13 @@ el clúster recrea un Pod borrado y cómo avanza un rolling update.
 make status         # pods, services, statefulsets, jobs
 
 make scale          # catalog-service a 4 réplicas
-                    # mata un pod a mano y mira cómo K8s lo recrea:
-kubectl delete pod -n incidentes <pod>
+
+# Mata un Pod a mano y mira cómo K8s lo recrea solo (estado deseado).
+# Primero lista los Pods para copiar el nombre de uno (la columna NAME):
+kubectl get pods -n incidentes -l app=catalog-service
+# Pega uno de esos nombres (el sufijo es distinto en cada máquina):
+kubectl delete pod -n incidentes catalog-service-XXXXX-YYYYY
+kubectl get pods -n incidentes -w   # observa: vuelven a ser 4 (Ctrl-C para salir)
 
 make rollout        # rolling update de notifications-service (v1 -> v2)
 make undo           # rollback a la versión anterior
