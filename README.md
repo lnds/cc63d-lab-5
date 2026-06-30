@@ -117,6 +117,20 @@ internos (ClusterIP). Por eso el selector de servicios de la interfaz va contra
 `GET /catalog/services`, una ruta que `incidents-service` **reenvía** al catálogo
 dentro del clúster (un proxy simple, el patrón de un *gateway*).
 
+### 7. Visualizar el clúster con el dashboard
+
+```bash
+make dashboard      # minikube dashboard
+```
+
+minikube trae el **Kubernetes Dashboard** integrado. `make dashboard` habilita
+el addon, levanta un proxy y abre el navegador con una vista de todo el clúster:
+pods, deployments, services, statefulsets, jobs, eventos y logs. Es la versión
+visual de lo que muestra `kubectl get`. Arriba a la izquierda, elige el namespace
+`incidentes` para ver solo lo del lab. Queda en primer plano: córtalo con Ctrl-C
+cuando termines. Déjalo abierto durante la sección siguiente: verás en vivo cómo
+el clúster recrea un Pod borrado y cómo avanza un rolling update.
+
 ## Operar el clúster
 
 ```bash

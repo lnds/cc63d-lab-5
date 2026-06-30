@@ -8,6 +8,8 @@
 #     make deploy     # crea todo en el clúster, en orden
 #     make seed       # datos de ejemplo
 #     make open       # abre el incidents-service en el navegador
+#  Visualizar:
+#     make dashboard  # abre el Kubernetes Dashboard en el navegador
 #  Operar:
 #     make status / make scale / make rollout / make undo
 #  Limpieza:
@@ -18,7 +20,7 @@ NS := incidentes
 SERVICES := catalog-service incidents-service notifications-service
 
 .PHONY: start build load deploy migrations-config seed open status logs \
-        scale rollout undo sizes undeploy stop
+        dashboard scale rollout undo sizes undeploy stop
 
 start:
 	minikube start
@@ -76,6 +78,12 @@ status:
 
 logs:
 	kubectl logs -n $(NS) -l app=incidents-service --tail=50
+
+# --- Dashboard web de Kubernetes (vista visual del clúster) ---
+# Habilita los addons dashboard + metrics-server, levanta un proxy y abre el
+# navegador. Quedará en primer plano: corta con Ctrl-C cuando termines.
+dashboard:
+	minikube dashboard
 
 # --- Operar el clúster (parte 3 del lab) ---
 scale:
