@@ -1,0 +1,5 @@
+# Un namespace agrupa y aísla todos los objetos de esta app dentro del clúster.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: incidentes

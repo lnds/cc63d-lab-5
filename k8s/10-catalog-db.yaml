@@ -1,0 +1,69 @@
+# ============================================================================
+#  PostgreSQL del catalog-service (database-per-service: su base, solo suya)
+# ============================================================================
+#
+#  StatefulSet (no Deployment) porque una base de datos tiene ESTADO: necesita
+#  identidad de red estable y un volumen persistente propio. El Service headless
+#  (clusterIP: None) le da el nombre DNS estable `catalog-db`.
+# ----------------------------------------------------------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalog-db
+  namespace: incidentes
+spec:
+  clusterIP: None          # headless: identidad de red para el StatefulSet
+  selector:
+    app: catalog-db
+  ports:
+    - port: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: catalog-db
+  namespace: incidentes
+spec:
+  serviceName: catalog-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: catalog-db
+  template:
+    metadata:
+      labels:
+        app: catalog-db
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          env:
+            - name: POSTGRES_DB
+              value: catalog
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+            # PostgreSQL escribe en una subcarpeta del volumen montado.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+  # El PVC se crea automáticamente por cada réplica del StatefulSet.
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi

@@ -1,0 +1,37 @@
+# Migraciones del incidents-service. Mismo patrón, contra incidents-db, con sus
+# propias migraciones (ConfigMap `incidents-migrations`).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: incidents-flyway
+  namespace: incidentes
+spec:
+  backoffLimit: 10
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: flyway
+          image: flyway/flyway:10-alpine
+          args: ["migrate"]
+          env:
+            - name: FLYWAY_URL
+              value: jdbc:postgresql://incidents-db:5432/incidents
+            - name: FLYWAY_USER
+              value: postgres
+            - name: FLYWAY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+            - name: FLYWAY_CONNECT_RETRIES
+              value: "60"
+            - name: FLYWAY_LOCATIONS
+              value: filesystem:/flyway/sql
+          volumeMounts:
+            - name: migrations
+              mountPath: /flyway/sql
+      volumes:
+        - name: migrations
+          configMap:
+            name: incidents-migrations

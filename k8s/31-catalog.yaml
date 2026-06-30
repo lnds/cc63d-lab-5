@@ -1,0 +1,70 @@
+# ============================================================================
+#  catalog-service (Python) — Deployment + Service
+# ============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalog-service
+  namespace: incidentes
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: catalog-service
+  template:
+    metadata:
+      labels:
+        app: catalog-service
+    spec:
+      # initContainer: la app no arranca hasta que su base acepte conexiones.
+      # Enseña el orden de dependencias sin un `depends_on` (que K8s no tiene).
+      initContainers:
+        - name: wait-for-db
+          image: busybox:1.36
+          command: ["sh", "-c", "until nc -z catalog-db 5432; do echo esperando catalog-db; sleep 2; done"]
+      containers:
+        - name: catalog
+          image: catalog-service:v1
+          imagePullPolicy: IfNotPresent
+          env:
+            # El password viene del Secret; la URL se arma interpolándolo.
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+            - name: DATABASE_URL
+              value: postgresql://postgres:$(POSTGRES_PASSWORD)@catalog-db:5432/catalog
+          ports:
+            - containerPort: 8080
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalog-service
+  namespace: incidentes
+spec:
+  selector:
+    app: catalog-service
+  ports:
+    - port: 8080
+      targetPort: 8080

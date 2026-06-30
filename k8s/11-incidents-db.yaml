@@ -1,0 +1,61 @@
+# PostgreSQL del incidents-service. Idéntico patrón al catalog-db, pero es otra
+# base, otro volumen, otro StatefulSet: las dos no comparten datos.
+apiVersion: v1
+kind: Service
+metadata:
+  name: incidents-db
+  namespace: incidentes
+spec:
+  clusterIP: None
+  selector:
+    app: incidents-db
+  ports:
+    - port: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: incidents-db
+  namespace: incidentes
+spec:
+  serviceName: incidents-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: incidents-db
+  template:
+    metadata:
+      labels:
+        app: incidents-db
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          env:
+            - name: POSTGRES_DB
+              value: incidents
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi

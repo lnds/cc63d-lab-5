@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.tool-versions
+notifications-service/notifications
+.DS_Store

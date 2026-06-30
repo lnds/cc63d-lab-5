@@ -1,0 +1,61 @@
+# ============================================================================
+#  notifications-service (Go) — Deployment + Service
+# ============================================================================
+#
+#  Deployment: mantiene N réplicas vivas, las recrea si mueren, y permite
+#  rolling updates. Service (ClusterIP): un nombre DNS estable + balanceo de
+#  carga interno hacia las réplicas. El resto del clúster lo llama por
+#  `http://notifications-service:8080`, sin saber cuántos pods hay ni dónde.
+# ----------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notifications-service
+  namespace: incidentes
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: notifications-service
+  template:
+    metadata:
+      labels:
+        app: notifications-service
+    spec:
+      containers:
+        - name: notifications
+          image: notifications-service:v1
+          imagePullPolicy: IfNotPresent   # usa la imagen cargada en minikube
+          ports:
+            - containerPort: 8080
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notifications-service
+  namespace: incidentes
+spec:
+  selector:
+    app: notifications-service
+  ports:
+    - port: 8080
+      targetPort: 8080
