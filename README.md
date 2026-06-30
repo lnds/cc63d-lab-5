@@ -168,6 +168,27 @@ make undeploy       # borra el namespace (y con él todo lo desplegado)
 make stop           # detiene minikube
 ```
 
+## Si cambias el código de un servicio
+
+Si modificas un servicio y vuelves a `make build` + `make load`, minikube puede
+**seguir corriendo la imagen vieja**: al reutilizar el mismo tag (`:v1`) no
+siempre reemplaza la que tenía cacheada en el nodo, y con `imagePullPolicy:
+IfNotPresent` el Pod tampoco la vuelve a traer. La página queda mostrando el
+código anterior (por ejemplo, un `404` donde debería estar la interfaz web).
+
+La forma confiable de actualizar es construir **dentro del daemon Docker del
+propio nodo** y reiniciar el Deployment:
+
+```bash
+eval $(minikube docker-env)                 # apunta docker al nodo minikube
+docker build -t incidents-service:v1 ./incidents-service
+eval $(minikube docker-env -u)              # vuelve a tu Docker local
+kubectl rollout restart deployment/incidents-service -n incidentes
+```
+
+La lección de fondo: **reutilizar un tag de imagen es frágil**. En un flujo real
+se versiona el tag (`v1` → `v2`) para que el cambio sea explícito y rastreable.
+
 ## Estructura
 
 ```
